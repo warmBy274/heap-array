@@ -145,6 +145,30 @@ impl<'a, T> IntoIterator for &'a mut RuntimeArray<T> {
         self.iter_mut()
     }
 }
+impl<T: Clone> Clone for RuntimeArray<T> {
+    fn clone(&self) -> Self {
+        if self.len == 0 {
+            Self {
+                ptr: NonNull::dangling(),
+                len: 0,
+                _marker: PhantomData,
+            }
+        }
+        else {
+            let ptr = unsafe {alloc(Layout::array::<T>(self.len).unwrap())} as *mut T;
+            for i in 0..self.len {
+                unsafe {ptr.add(i).write(self.ptr.add(i).read().clone());}
+            }
+            Self {
+                ptr: unsafe {NonNull::new_unchecked(ptr)},
+                len: self.len,
+                _marker: PhantomData
+            }
+        }
+    }
+}
+unsafe impl<T: Send> Send for RuntimeArray<T> {}
+unsafe impl<T: Sync> Sync for RuntimeArray<T> {}
 
 pub struct Iter<'a, T> {
     ptr: *const T,
