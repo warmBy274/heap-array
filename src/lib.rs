@@ -11,19 +11,19 @@ use std::{
 #[macro_export]
 macro_rules! array {
     [$value:expr; $len:expr] => {{
-        $crate::RuntimeArray::new($value, $len)
+        $crate::HeapArray::new($value, $len)
     }};
     [$($item:expr),+ $(,)?] => {{
-        $crate::RuntimeArray::from_slice(&[$($item),+])
+        $crate::HeapArray::from_slice(&[$($item),+])
     }}
 }
 
-pub struct RuntimeArray<T> {
+pub struct HeapArray<T> {
     ptr: NonNull<T>,
     len: usize,
     _marker: PhantomData<T>
 }
-impl<T: Clone> RuntimeArray<T> {
+impl<T: Clone> HeapArray<T> {
     #[must_use]
     pub fn new(value: T, len: usize) -> Self {
         if len == 0 {
@@ -73,7 +73,7 @@ impl<T: Clone> RuntimeArray<T> {
         self.as_slice().to_vec()
     }
 }
-impl<T: Clone> Clone for RuntimeArray<T> {
+impl<T: Clone> Clone for HeapArray<T> {
     fn clone(&self) -> Self {
         if self.len == 0 {
             Self {
@@ -95,7 +95,7 @@ impl<T: Clone> Clone for RuntimeArray<T> {
         }
     }
 }
-impl<T> RuntimeArray<T> {
+impl<T> HeapArray<T> {
     #[inline]
     #[must_use]
     pub fn len(&self) -> usize {
@@ -152,7 +152,7 @@ impl<T> RuntimeArray<T> {
         }
     }
 }
-impl<T> Index<usize> for RuntimeArray<T> {
+impl<T> Index<usize> for HeapArray<T> {
     type Output = T;
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
@@ -162,7 +162,7 @@ impl<T> Index<usize> for RuntimeArray<T> {
         unsafe {&*self.ptr.add(index).as_ptr()}
     }
 }
-impl<T> IndexMut<usize> for RuntimeArray<T> {
+impl<T> IndexMut<usize> for HeapArray<T> {
     #[inline]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         if index >= self.len {
@@ -171,7 +171,7 @@ impl<T> IndexMut<usize> for RuntimeArray<T> {
         unsafe {&mut *self.ptr.add(index).as_ptr()}
     }
 }
-impl<T> Drop for RuntimeArray<T> {
+impl<T> Drop for HeapArray<T> {
     fn drop(&mut self) {
         if self.len != 0 {
             unsafe {
@@ -186,7 +186,7 @@ impl<T> Drop for RuntimeArray<T> {
         }
     }
 }
-impl<T> IntoIterator for RuntimeArray<T> {
+impl<T> IntoIterator for HeapArray<T> {
     type Item = T;
     type IntoIter = IntoIter<T>;
     fn into_iter(self) -> Self::IntoIter {
@@ -198,22 +198,22 @@ impl<T> IntoIterator for RuntimeArray<T> {
         }
     }
 }
-impl<'a, T> IntoIterator for &'a RuntimeArray<T> {
+impl<'a, T> IntoIterator for &'a HeapArray<T> {
     type Item = &'a T;
     type IntoIter = Iter<'a, T>;
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
-impl<'a, T> IntoIterator for &'a mut RuntimeArray<T> {
+impl<'a, T> IntoIterator for &'a mut HeapArray<T> {
     type Item = &'a mut T;
     type IntoIter = IterMut<'a, T>;
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
     }
 }
-unsafe impl<T: Send> Send for RuntimeArray<T> {}
-unsafe impl<T: Sync> Sync for RuntimeArray<T> {}
+unsafe impl<T: Send> Send for HeapArray<T> {}
+unsafe impl<T: Sync> Sync for HeapArray<T> {}
 
 pub struct Iter<'a, T> {
     ptr: *const T,
@@ -266,7 +266,7 @@ impl<'a, T> Iterator for IterMut<'a, T> {
 impl<'a, T> ExactSizeIterator for IterMut<'a, T> {}
 
 pub struct IntoIter<T> {
-    buf: ManuallyDrop<RuntimeArray<T>>,
+    buf: ManuallyDrop<HeapArray<T>>,
     start: usize,
     end: usize,
 }
