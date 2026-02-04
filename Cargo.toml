@@ -1,8 +1,8 @@
 [package]
-name = "heap-array"
-version = "2.5.0"
+name = "collections"
+version = "3.0.0"
 edition = "2024"
-description = "Rust crate that provides an fast array, that can be allocated in runtime on heap"
+description = "Rust crate that provides a some types of collections, such as heap array and ring buffer"
 license = "MIT"
 
 [dependencies]
