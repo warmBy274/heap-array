@@ -2,7 +2,7 @@
 name = "little-collections"
 version = "3.1.0"
 edition = "2024"
-description = "Rust crate that provides a some types of collections, such as heap array and ring buffer"
+description = "Rust crate that provides a some types of collections, such as heap array, ring buffer, function map and more in future"
 license = "MIT"
 
 [dependencies]

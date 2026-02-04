@@ -1,2 +1,2 @@
-# heap-array
-Rust crate that provides an array, that can be allocated in runtime
+# little-collections
+Rust crate that provides a some types of collections, such as heap array, ring buffer, function map and more in future
