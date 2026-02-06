@@ -1,22 +1,22 @@
 use std::mem::take;
 
-pub struct FnMap<K, V> {
-    index_fn: fn(&K) -> usize,
+pub struct FnMap<V> {
+    index_fn: fn(&V) -> usize,
     buckets: Vec<Option<(usize, V)>>
 }
-impl<K, V: Clone> FnMap<K, V> {
-    pub fn new(index_fn: fn(&K) -> usize) -> Self {
+impl<V: Clone> FnMap<V> {
+    pub fn new(index_fn: fn(&V) -> usize) -> Self {
         Self {
             index_fn,
             buckets: Vec::new()
         }
     }
-    pub fn insert(&mut self, key: K, value: V) -> () {
+    pub fn insert(&mut self, value: V) -> () {
         if self.buckets.len() == 0 {
-            self.buckets.push(Some(((self.index_fn)(&key), value)));
+            self.buckets.push(Some(((self.index_fn)(&value), value)));
             return;
         }
-        let index = (self.index_fn)(&key);
+        let index = (self.index_fn)(&value);
         let bucket_index = index % self.buckets.len();
         if let Some((i, v)) = &mut self.buckets[bucket_index] {
             if *i == index {
@@ -24,20 +24,20 @@ impl<K, V: Clone> FnMap<K, V> {
             }
             else {
                 self.resize();
-                self.insert(key, value);
+                self.insert(value);
             }
         }
         else {
             self.buckets[bucket_index] = Some((index, value));
         }
     }
-    pub fn get(&self, key: K) -> Option<&V> {
-        let index = (self.index_fn)(&key) % self.buckets.len();
+    pub fn get(&self, id: usize) -> Option<&V> {
+        let index = id % self.buckets.len();
         if let Some((_, v)) = &self.buckets[index] {Some(v)}
         else {None}
     }
-    pub fn get_mut(&mut self, key: K) -> Option<&mut V> {
-        let index = (self.index_fn)(&key) % self.buckets.len();
+    pub fn get_mut(&mut self, id: usize) -> Option<&mut V> {
+        let index = id % self.buckets.len();
         if let Some((_, v)) = &mut self.buckets[index] {Some(v)}
         else {None}
     }
