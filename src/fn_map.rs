@@ -1,4 +1,4 @@
-use std::{mem::replace, ops::{Deref, DerefMut}};
+use std::{mem::replace, ops::{Deref, DerefMut, Index}};
 
 pub struct FnMap<V> {
     index_fn: fn(&V) -> usize,
@@ -63,6 +63,13 @@ impl<V> FnMap<V> {
                 self.buckets[index % new_len] = Some((index, value));
             }
         }
+    }
+}
+impl<V> Index<usize> for FnMap<V> {
+    type Output = V;
+    fn index(&self, index: usize) -> &Self::Output {
+        if let Some(v) = self.get(index) {v}
+        else {panic!("index {} not in FnMap", index);}
     }
 }
 impl<V> IntoIterator for FnMap<V> {

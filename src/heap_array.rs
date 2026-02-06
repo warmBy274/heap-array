@@ -169,19 +169,16 @@ impl<T> Index<usize> for HeapArray<T> {
     type Output = T;
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
-        if index >= self.len {
-            panic!("index out of bounds: the len is {} but the index is {}", self.len, index);
-        }
-        unsafe {&*self.ptr.add(index).as_ptr()}
+        if let Some(v) = self.get(index) {v}
+        else {panic!("index out of bounds: the len is {} but the index is {}", self.len, index);}
     }
 }
 impl<T> IndexMut<usize> for HeapArray<T> {
     #[inline]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        if index >= self.len {
-            panic!("index out of bounds: the len is {} but the index is {}", self.len, index);
-        }
-        unsafe {&mut *self.ptr.add(index).as_ptr()}
+        let len = self.len;
+        if let Some(v) = self.get_mut(index) {v}
+        else {panic!("index out of bounds: the len is {} but the index is {}", len, index);}
     }
 }
 impl<T> Drop for HeapArray<T> {
