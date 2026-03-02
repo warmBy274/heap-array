@@ -31,14 +31,14 @@ impl<K, V> FnMap<K, V> {
             self.buckets[bucket_index] = Some((index, key, value));
         }
     }
-    pub fn get(&self, id: usize) -> Option<&V> {
-        let index = id % self.buckets.len();
+    pub fn get(&self, key: K) -> Option<&V> {
+        let index = (self.index_fn)(&key) % self.buckets.len();
         if let Some((_, _, v)) = &self.buckets[index] {Some(v)}
         else {None}
     }
-    pub fn get_mut(&mut self, id: usize) -> Option<&mut V> {
-        let index = id % self.buckets.len();
-        if let Some((_, _, v)) = self.buckets[index].as_mut() {
+    pub fn get_mut(&mut self, key: K) -> Option<&mut V> {
+        let index = (self.index_fn)(&key) % self.buckets.len();
+        if let Some((_, _, v)) = &mut self.buckets[index] {
             Some(v)
         }
         else {None}
@@ -64,17 +64,15 @@ impl<K, V> FnMap<K, V> {
 }
 impl<K, V> Index<K> for FnMap<K, V> {
     type Output = V;
-    fn index(&self, key: K) -> &Self::Output {
-        let index = (self.index_fn)(&key);
+    fn index(&self, index: K) -> &Self::Output {
         if let Some(v) = self.get(index) {v}
-        else {panic!("index {} not in FnMap", index);}
+        else {panic!("index not in FnMap");}
     }
 }
 impl<K, V> IndexMut<K> for FnMap<K, V> {
-    fn index_mut(&mut self, key: K) -> &mut Self::Output {
-        let index = (self.index_fn)(&key);
+    fn index_mut(&mut self, index: K) -> &mut Self::Output {
         if let Some(v) = self.get_mut(index) {v}
-        else {panic!("index {} not in FnMap", index);}
+        else {panic!("index not in FnMap");}
     }
 }
 impl<K, V> IntoIterator for FnMap<K, V> {
