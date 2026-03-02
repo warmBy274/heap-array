@@ -1,52 +1,49 @@
-use std::{mem::replace, ops::{Deref, DerefMut, Index}};
+use std::{mem::replace, ops::{Index, IndexMut}};
 
-pub struct FnMap<V> {
-    index_fn: fn(&V) -> usize,
-    buckets: Vec<Option<(usize, V)>>
+pub struct FnMap<K, V> {
+    index_fn: fn(&K) -> usize,
+    buckets: Vec<Option<(usize, K, V)>>
 }
-impl<V> FnMap<V> {
-    pub fn new(index_fn: fn(&V) -> usize) -> Self {
+impl<K, V> FnMap<K, V> {
+    pub fn new(index_fn: fn(&K) -> usize) -> Self {
         Self {
             index_fn,
             buckets: Vec::new()
         }
     }
-    pub fn insert(&mut self, value: V) -> () {
+    pub fn insert(&mut self, key: K, value: V) -> () {
         if self.buckets.len() == 0 {
-            self.buckets.push(Some(((self.index_fn)(&value), value)));
+            self.buckets.push(Some(((self.index_fn)(&key), key, value)));
             return;
         }
-        let index = (self.index_fn)(&value);
+        let index = (self.index_fn)(&key);
         let bucket_index = index % self.buckets.len();
-        if let Some((i, v)) = &mut self.buckets[bucket_index] {
+        if let Some((i, _, v)) = &mut self.buckets[bucket_index] {
             if *i == index {
                 *v = value;
             }
             else {
                 self.resize();
-                self.insert(value);
+                self.insert(key, value);
             }
         }
         else {
-            self.buckets[bucket_index] = Some((index, value));
+            self.buckets[bucket_index] = Some((index, key, value));
         }
     }
     pub fn get(&self, id: usize) -> Option<&V> {
         let index = id % self.buckets.len();
-        if let Some((_, v)) = &self.buckets[index] {Some(v)}
+        if let Some((_, _, v)) = &self.buckets[index] {Some(v)}
         else {None}
     }
-    pub fn get_mut(&mut self, id: usize) -> Option<MutGuard<'_, V>> {
+    pub fn get_mut(&mut self, id: usize) -> Option<&mut V> {
         let index = id % self.buckets.len();
-        if self.buckets[index].is_some() {
-            Some(MutGuard {
-                map: self,
-                index
-            })
+        if let Some((_, _, v)) = self.buckets[index].as_mut() {
+            Some(v)
         }
         else {None}
     }
-    pub fn iter(&self) -> Iter<'_, V> {
+    pub fn iter(&self) -> Iter<'_, K, V> {
         Iter {
             buckets: &self.buckets,
             pos: 0
@@ -59,22 +56,30 @@ impl<V> FnMap<V> {
             self.buckets.push(None);
         }
         for element in old_buckets {
-            if let Some((index, value)) = element {
-                self.buckets[index % new_len] = Some((index, value));
+            if let Some((index, key, value)) = element {
+                self.buckets[index % new_len] = Some((index, key, value));
             }
         }
     }
 }
-impl<V> Index<usize> for FnMap<V> {
+impl<K, V> Index<K> for FnMap<K, V> {
     type Output = V;
-    fn index(&self, index: usize) -> &Self::Output {
+    fn index(&self, key: K) -> &Self::Output {
+        let index = (self.index_fn)(&key);
         if let Some(v) = self.get(index) {v}
         else {panic!("index {} not in FnMap", index);}
     }
 }
-impl<V> IntoIterator for FnMap<V> {
-    type Item = V;
-    type IntoIter = IntoIter<V>;
+impl<K, V> IndexMut<K> for FnMap<K, V> {
+    fn index_mut(&mut self, key: K) -> &mut Self::Output {
+        let index = (self.index_fn)(&key);
+        if let Some(v) = self.get_mut(index) {v}
+        else {panic!("index {} not in FnMap", index);}
+    }
+}
+impl<K, V> IntoIterator for FnMap<K, V> {
+    type Item = (K, V);
+    type IntoIter = IntoIter<K, V>;
     fn into_iter(self) -> Self::IntoIter {
         IntoIter {
             buckets: self.buckets,
@@ -83,18 +88,18 @@ impl<V> IntoIterator for FnMap<V> {
     }
 }
 
-pub struct Iter<'a, V> {
-    buckets: &'a [Option<(usize, V)>],
+pub struct Iter<'a, K, V> {
+    buckets: &'a [Option<(usize, K, V)>],
     pos: usize,
 }
-impl<'a, V> Iterator for Iter<'a, V> {
-    type Item = &'a (usize, V);
+impl<'a, K, V> Iterator for Iter<'a, K, V> {
+    type Item = (&'a K, &'a V);
     fn next(&mut self) -> Option<Self::Item> {
         while self.pos < self.buckets.len() {
             match &self.buckets[self.pos] {
-                Some(pair) => {
+                Some((_, key, value)) => {
                     self.pos += 1;
-                    return Some(pair);
+                    return Some((key, value));
                 }
                 None => {
                     self.pos += 1;
@@ -109,19 +114,18 @@ impl<'a, V> Iterator for Iter<'a, V> {
     }
 }
 
-pub struct IntoIter<V> {
-    buckets: Vec<Option<(usize, V)>>,
+pub struct IntoIter<K, V> {
+    buckets: Vec<Option<(usize, K, V)>>,
     pos: usize,
 }
-impl<V> Iterator for IntoIter<V> {
-    type Item = V;
+impl<K, V> Iterator for IntoIter<K, V> {
+    type Item = (K, V);
     fn next(&mut self) -> Option<Self::Item> {
         while self.pos < self.buckets.len() {
             let bucket = &mut self.buckets[self.pos];
             self.pos += 1;
-
-            if let Some((_, value)) = bucket.take() {
-                return Some(value);
+            if let Some((_, key, value)) = bucket.take() {
+                return Some((key, value));
             }
         }
         None
@@ -129,27 +133,5 @@ impl<V> Iterator for IntoIter<V> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         let remaining = self.buckets.len() - self.pos;
         (0, Some(remaining))
-    }
-}
-
-pub struct MutGuard<'a, T> {
-    map: &'a mut FnMap<T>,
-    index: usize
-}
-impl<'a, T> Deref for MutGuard<'a, T> {
-    type Target = T;
-    fn deref(&self) -> &Self::Target {
-        &self.map.buckets[self.index].as_ref().unwrap().1
-    }
-}
-impl<'a, T> DerefMut for MutGuard<'a, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.map.buckets[self.index].as_mut().unwrap().1
-    }
-}
-impl<'a, T> Drop for MutGuard<'a, T> {
-    fn drop(&mut self) {
-        let value = replace(&mut self.map.buckets[self.index], None).unwrap().1;
-        self.map.insert(value);
     }
 }
