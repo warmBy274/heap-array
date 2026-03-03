@@ -46,6 +46,10 @@ impl<V> FnSet<V> {
         }
         else {None}
     }
+    pub fn remove(&mut self, id: usize) -> Option<V> {
+        let index = id % self.buckets.len();
+        self.buckets[index].take().map(|(_, v)| v)
+    }
     pub fn iter(&self) -> Iter<'_, V> {
         Iter {
             buckets: &self.buckets,
@@ -119,7 +123,6 @@ impl<V> Iterator for IntoIter<V> {
         while self.pos < self.buckets.len() {
             let bucket = &mut self.buckets[self.pos];
             self.pos += 1;
-
             if let Some((_, value)) = bucket.take() {
                 return Some(value);
             }
@@ -149,7 +152,7 @@ impl<'a, T> DerefMut for MutGuard<'a, T> {
 }
 impl<'a, T> Drop for MutGuard<'a, T> {
     fn drop(&mut self) {
-        let value = replace(&mut self.map.buckets[self.index], None).unwrap().1;
+        let value = self.map.buckets[self.index].take().unwrap().1;
         self.map.insert(value);
     }
 }

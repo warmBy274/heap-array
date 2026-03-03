@@ -1,4 +1,4 @@
-use std::{mem::replace, ops::{Index, IndexMut}};
+use std::{mem::replace, ops::{Deref, DerefMut, Index, IndexMut}};
 
 pub struct FnMap<K, V> {
     index_fn: fn(&K) -> usize,
@@ -31,17 +31,33 @@ impl<K, V> FnMap<K, V> {
             self.buckets[bucket_index] = Some((index, key, value));
         }
     }
-    pub fn get(&self, key: K) -> Option<&V> {
-        let index = (self.index_fn)(&key) % self.buckets.len();
+    pub fn get(&self, key: &K) -> Option<&V> {
+        let index = (self.index_fn)(key) % self.buckets.len();
         if let Some((_, _, v)) = &self.buckets[index] {Some(v)}
         else {None}
     }
-    pub fn get_mut(&mut self, key: K) -> Option<&mut V> {
-        let index = (self.index_fn)(&key) % self.buckets.len();
-        if let Some((_, _, v)) = &mut self.buckets[index] {
-            Some(v)
+    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+        let index = (self.index_fn)(key) % self.buckets.len();
+        if let Some((_, _, v)) = &mut self.buckets[index] {Some(v)}
+        else {None}
+    }
+    pub fn get_key_mut(&mut self, key: &K) -> Option<KeyMutGuard<'_, K, V>> {
+        let index = (self.index_fn)(key) % self.buckets.len();
+        if self.buckets[index].is_some() {
+            Some(KeyMutGuard {
+                map: self,
+                index
+            })
         }
         else {None}
+    }
+    pub fn remove(&mut self, key: &K) -> Option<V> {
+        let index = (self.index_fn)(key) % self.buckets.len();
+        self.buckets[index].take().map(|(_, _, v)| v)
+    }
+    pub fn remove_pair(&mut self, key: &K) -> Option<(K, V)> {
+        let index = (self.index_fn)(key) % self.buckets.len();
+        self.buckets[index].take().map(|(_, k, v)| (k, v))
     }
     pub fn iter(&self) -> Iter<'_, K, V> {
         Iter {
@@ -62,16 +78,21 @@ impl<K, V> FnMap<K, V> {
         }
     }
 }
+impl<K: Clone, V: Clone> FnMap<K, V> {
+    pub fn clear(&mut self) -> () {
+        self.buckets = vec![None; self.buckets.len()];
+    }
+}
 impl<K, V> Index<K> for FnMap<K, V> {
     type Output = V;
     fn index(&self, index: K) -> &Self::Output {
-        if let Some(v) = self.get(index) {v}
+        if let Some(v) = self.get(&index) {v}
         else {panic!("index not in FnMap");}
     }
 }
 impl<K, V> IndexMut<K> for FnMap<K, V> {
     fn index_mut(&mut self, index: K) -> &mut Self::Output {
-        if let Some(v) = self.get_mut(index) {v}
+        if let Some(v) = self.get_mut(&index) {v}
         else {panic!("index not in FnMap");}
     }
 }
@@ -131,5 +152,29 @@ impl<K, V> Iterator for IntoIter<K, V> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         let remaining = self.buckets.len() - self.pos;
         (0, Some(remaining))
+    }
+}
+
+pub struct KeyMutGuard<'a, K, V> {
+    map: &'a mut FnMap<K, V>,
+    index: usize
+}
+impl<'a, K, V> Deref for KeyMutGuard<'a, K, V> {
+    type Target = K;
+    fn deref(&self) -> &Self::Target {
+        if let Some((_, k, _)) = &self.map.buckets[self.index] {k}
+        else {unreachable!();}
+    }
+}
+impl<'a, K, V> DerefMut for KeyMutGuard<'a, K, V> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        if let Some((_, k, _)) = &mut self.map.buckets[self.index] {k}
+        else {unreachable!();}
+    }
+}
+impl<'a, K, V> Drop for KeyMutGuard<'a, K, V> {
+    fn drop(&mut self) {
+        let pair = self.map.buckets[self.index].take().unwrap();
+        self.map.insert(pair.1, pair.2);
     }
 }
