@@ -1,5 +1,6 @@
 use std::{mem::replace, ops::{Deref, DerefMut, Index}};
 
+#[derive(Clone)]
 pub struct FnSet<V> {
     index_fn: fn(&V) -> usize,
     buckets: Vec<Option<(usize, V)>>

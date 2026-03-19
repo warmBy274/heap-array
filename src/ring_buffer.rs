@@ -10,6 +10,7 @@ macro_rules! ring {
     }}
 }
 
+#[derive(Clone)]
 pub struct RingBuffer<T> {
     next_read: usize,
     last_write: usize,

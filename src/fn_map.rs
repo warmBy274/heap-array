@@ -1,5 +1,6 @@
 use std::{mem::replace, ops::{Deref, DerefMut, Index, IndexMut}};
 
+#[derive(Clone)]
 pub struct FnMap<K, V> {
     index_fn: fn(&K) -> usize,
     buckets: Vec<Option<(usize, K, V)>>
