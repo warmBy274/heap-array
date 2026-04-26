@@ -6,7 +6,7 @@ pub struct FnSet<V> {
     buckets: Vec<Option<(usize, V)>>
 }
 impl<V> FnSet<V> {
-    pub fn new(index_fn: fn(&V) -> usize) -> Self {
+    pub const fn new(index_fn: fn(&V) -> usize) -> Self {
         Self {
             index_fn,
             buckets: Vec::new()

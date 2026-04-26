@@ -6,7 +6,7 @@ pub struct FnMap<K, V> {
     buckets: Vec<Option<(usize, K, V)>>
 }
 impl<K, V> FnMap<K, V> {
-    pub fn new(index_fn: fn(&K) -> usize) -> Self {
+    pub const fn new(index_fn: fn(&K) -> usize) -> Self {
         Self {
             index_fn,
             buckets: Vec::new()
