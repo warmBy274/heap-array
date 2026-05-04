@@ -4,4 +4,4 @@ version = 4
 
 [[package]]
 name = "little-collections"
-version = "3.8.1"
+version = "3.8.2"

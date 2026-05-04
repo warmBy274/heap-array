@@ -91,7 +91,9 @@ impl<K, V> FnMap<K, V> {
     pub fn iter_pairs(&self) -> impl Iterator<Item = &(K, V)> {
         self.buckets.iter().flatten().map(|(_, p)| p)
     }
-    // here must be iter MUT pairs
+    pub fn iter_mut_pairs(&mut self) -> impl Iterator<Item = (&K, &mut V)> {
+        self.buckets.iter_mut().flatten().map(|(_, (k, v))| (&*k, v))
+    }
     pub fn retain(&mut self, mut f: impl FnMut(&(K, V)) -> bool) -> () {
         for bucket in self.buckets.iter_mut() {
             if let Some((_, p)) = bucket {
