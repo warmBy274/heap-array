@@ -32,6 +32,12 @@ impl<K, V> FnMap<K, V> {
             self.buckets[bucket_index] = Some((index, (key, value)));
         }
     }
+    pub fn contains(&self, key: &K) -> bool {
+        if self.buckets.len() == 0 {return false;}
+        let id = (self.index_fn)(key);
+        let index = id % self.buckets.len();
+        self.buckets[index].is_some()
+    }
     pub fn get(&self, key: &K) -> Option<&V> {
         if self.buckets.len() == 0 {return None;}
         let id = (self.index_fn)(key);
@@ -100,6 +106,9 @@ impl<K, V> FnMap<K, V> {
             }
         }
     }
+    pub fn clear(&mut self) -> () {
+        self.buckets = Vec::new();
+    }
     fn resize(&mut self) -> () {
         let new_len = self.buckets.len() * 2;
         let old_buckets = replace(&mut self.buckets, Vec::with_capacity(new_len));
@@ -113,9 +122,10 @@ impl<K, V> FnMap<K, V> {
         }
     }
 }
-impl<K: Clone, V: Clone> FnMap<K, V> {
-    pub fn clear(&mut self) -> () {
-        self.buckets = vec![None; self.buckets.len()];
+impl<K, V: PartialEq> FnMap<K, V> {
+    pub fn contains_value(&self, value: &V) -> bool {
+        if self.buckets.len() == 0 {return false;}
+        self.buckets.iter().any(|x| if let Some((_, (_, v))) = x {v == value} else {false})
     }
 }
 impl<K, V> Index<K> for FnMap<K, V> {
